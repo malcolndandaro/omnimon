@@ -1,0 +1,12 @@
+# Omnimon reverse proxy (ADR-0002: Caddy, not nginx+certbot).
+#
+# The site address comes from $OMNIMON_DOMAIN:
+#   • "localhost"          → Caddy serves its trusted internal certificate
+#   • a real FQDN          → Caddy provisions & auto-renews a Let's Encrypt cert
+#
+# reverse_proxy transparently handles the WebSocket upgrade used by the
+# runner's tunnel (slice 03), so no extra configuration is needed for it.
+
+{$OMNIMON_DOMAIN} {
+	reverse_proxy omnigent-server:8000
+}

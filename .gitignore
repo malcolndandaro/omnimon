@@ -1,0 +1,15 @@
+# Secrets and local config — never commit
+.env
+.env.local
+*.local
+
+# Local agent / editor config
+.claude/
+
+# Runtime / data
+data/
+*.log
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

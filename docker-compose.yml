@@ -1,0 +1,139 @@
+# Omnimon — a deployment wrapper around upstream Omnigent.
+# One env-driven stack of sibling containers (no Docker-in-Docker).
+# Configure by editing .env (only OMNIMON_DOMAIN is required to boot the
+# control plane); then: docker compose up -d
+name: omnimon
+
+services:
+  # ── TLS front door (ADR-0002) ───────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      OMNIMON_DOMAIN: ${OMNIMON_DOMAIN:?set OMNIMON_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data      # issued certificates persist here
+      - caddy-config:/config
+    depends_on:
+      omnigent-server:
+        condition: service_started
+    networks:
+      - control-plane
+
+  # ── config.yaml renderer ────────────────────────────────────────────
+  # Omnigent reads its access-control allowlist from /data/config.yaml,
+  # not from an env var. This one-shot init container renders that file
+  # from OMNIMON_ALLOWED_EMAILS (an `admins:` list) into the shared data
+  # volume before the server starts. The authoritative per-email gate is
+  # the Google OAuth "Testing" test-user list (see README) — this just
+  # grants those same accounts admin in Omnigent.
+  config-init:
+    image: alpine:3
+    environment:
+      OMNIMON_ALLOWED_EMAILS: ${OMNIMON_ALLOWED_EMAILS:?set OMNIMON_ALLOWED_EMAILS in .env}
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        admins=$$(printf '%s' "$$OMNIMON_ALLOWED_EMAILS" | sed 's/[[:space:]]//g; s/,/, /g')
+        printf 'admins: [%s]\n' "$$admins" > /data/config.yaml
+        echo 'rendered /data/config.yaml:'; cat /data/config.yaml
+    volumes:
+      - artifact-data:/data
+    networks:
+      - control-plane
+
+  # ── Omnigent control plane: UI / API (ADR-0001: pinned upstream image) ─
+  omnigent-server:
+    image: ${OMNIGENT_IMAGE:-ghcr.io/omnigent-ai/omnigent-server}:${OMNIGENT_IMAGE_TAG:-v0.1.0}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-omnigent}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-omnigent}
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      ARTIFACT_DIR: /data/artifacts
+      OMNIGENT_ADMIN_CREDENTIALS_PATH: /data/admin-credentials
+      # Everything below is derived from the single OMNIMON_DOMAIN value:
+      OMNIGENT_DOMAIN: ${OMNIMON_DOMAIN}
+      OMNIGENT_ACCOUNTS_BASE_URL: https://${OMNIMON_DOMAIN}
+      # ── Authentication: Google OIDC, on in every environment ──────────
+      OMNIGENT_AUTH_ENABLED: ${OMNIGENT_AUTH_ENABLED:-1}
+      OMNIGENT_AUTH_PROVIDER: oidc
+      OMNIGENT_OIDC_ISSUER: https://accounts.google.com
+      OMNIGENT_OIDC_CLIENT_ID: ${OMNIGENT_OIDC_CLIENT_ID:?set OMNIGENT_OIDC_CLIENT_ID in .env}
+      OMNIGENT_OIDC_CLIENT_SECRET: ${OMNIGENT_OIDC_CLIENT_SECRET:?set OMNIGENT_OIDC_CLIENT_SECRET in .env}
+      # No open signup: external users only via explicit one-time invites.
+      OMNIGENT_OIDC_ALLOW_INVITES: ${OMNIGENT_OIDC_ALLOW_INVITES:-0}
+      # OIDC mode signs its session cookie with this (hex, >=32 bytes).
+      OMNIGENT_OIDC_COOKIE_SECRET: ${OMNIGENT_OIDC_COOKIE_SECRET:?set OMNIGENT_OIDC_COOKIE_SECRET in .env}
+    volumes:
+      - artifact-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-init:
+        condition: service_completed_successfully
+    networks:
+      - control-plane
+
+  # ── Database ────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-omnigent}
+      POSTGRES_USER: ${POSTGRES_USER:-omnigent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnigent} -d ${POSTGRES_DB:-omnigent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - control-plane
+
+  # ── Runner / Host: executes agent sessions (ADR-0003) ───────────────
+  # A privileged sibling container (bubblewrap needs the privilege) on its
+  # OWN network, deliberately NOT on control-plane: it reaches the server
+  # only through the public front door (Caddy) via host-gateway, exactly
+  # like any external host — so agents here cannot touch Postgres directly.
+  # Auth is one-time/interactive; see runner/entrypoint.sh.
+  omnigent-runner:
+    build:
+      context: ./runner
+    restart: unless-stopped
+    privileged: true
+    environment:
+      OMNIGENT_SERVER_URL: https://${OMNIMON_DOMAIN}
+      # Claude Code subscription auth (headless). Obtain once with
+      # `claude setup-token` and store in .env. Optional so the stack still
+      # boots without it; the runner just can't run Claude sessions until set.
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+    extra_hosts:
+      # Resolve the public domain to the Docker host so the runner dials
+      # back through Caddy (works for a real FQDN and for localhost).
+      - "${OMNIMON_DOMAIN}:host-gateway"
+    volumes:
+      - runner-home:/home/omni   # persists the one-time login + Claude creds
+    networks:
+      - runner-net
+
+networks:
+  control-plane:
+    name: omnimon-control-plane
+  runner-net:
+    name: omnimon-runner-net
+
+volumes:
+  postgres-data:
+  artifact-data:
+  caddy-data:
+  caddy-config:
+  runner-home:

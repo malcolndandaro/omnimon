@@ -1,0 +1,9 @@
+# Force LF everywhere — this repo is deployed to Linux hosts; CRLF in shell
+# scripts breaks them. Keeps clones byte-identical across Windows/macOS/Linux.
+* text=auto eol=lf
+
+*.sh      text eol=lf
+Dockerfile text eol=lf
+Caddyfile text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
