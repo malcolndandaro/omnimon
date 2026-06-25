@@ -50,6 +50,12 @@ docker compose exec omnigent-runner claude setup-token   # -> put token in .env 
   enforced by keeping the Google OAuth app in **Testing** mode with the allowed
   email as the sole test user. `OMNIMON_ALLOWED_EMAILS` also renders an
   `admins:` list into `/data/config.yaml`.
+- Agents run inside **bubblewrap**, which strips the host env (only
+  `PATH/HOME/USER/LC_*` pass by default). To give agents a credential like
+  `GH_TOKEN`, name it in **`OMNIGENT_RUNNER_ENV_PASSTHROUGH`** on the runner —
+  setting it in the container env alone is not enough. `CLAUDE_CODE_OAUTH_TOKEN`
+  and the other standard harness creds are forwarded automatically. Only **new**
+  sessions pick up a passthrough change.
 - Claude Code auth is headless via `CLAUDE_CODE_OAUTH_TOKEN`; capture the token
   from `claude setup-token` with tmux `capture-pane` (raw TUI logs corrupt it),
   and submit input with a carriage return.
