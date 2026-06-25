@@ -120,6 +120,17 @@ services:
       GH_TOKEN: ${GH_TOKEN:-}
       GIT_USER_NAME: ${GIT_USER_NAME:-}
       GIT_USER_EMAIL: ${GIT_USER_EMAIL:-}
+      # Commit identity — git reads these natively, so they work inside the
+      # bwrap sandbox once forwarded (below).
+      GIT_AUTHOR_NAME: ${GIT_USER_NAME:-}
+      GIT_AUTHOR_EMAIL: ${GIT_USER_EMAIL:-}
+      GIT_COMMITTER_NAME: ${GIT_USER_NAME:-}
+      GIT_COMMITTER_EMAIL: ${GIT_USER_EMAIL:-}
+      # Agents run inside a bubblewrap sandbox that strips the host env
+      # (deny-by-default). Name the vars the host must forward INTO sessions —
+      # the standard harness creds (incl. CLAUDE_CODE_OAUTH_TOKEN) are already
+      # forwarded; GH_TOKEN + git identity are the extras we add.
+      OMNIGENT_RUNNER_ENV_PASSTHROUGH: ${OMNIGENT_RUNNER_ENV_PASSTHROUGH:-GH_TOKEN,GIT_AUTHOR_NAME,GIT_AUTHOR_EMAIL,GIT_COMMITTER_NAME,GIT_COMMITTER_EMAIL}
     extra_hosts:
       # Resolve the public domain to the Docker host so the runner dials
       # back through Caddy (works for a real FQDN and for localhost).

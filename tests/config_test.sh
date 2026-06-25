@@ -76,6 +76,7 @@ assert_grep "runner/entrypoint.sh" "omnigent host" "runner runs 'omnigent host'"
 assert_grep "docker-compose.yml" "CLAUDE_CODE_OAUTH_TOKEN" "runner receives the Claude Code token"
 assert_grep ".env.example" "CLAUDE_CODE_OAUTH_TOKEN=" ".env.example documents the Claude Code token"
 assert_grep "docker-compose.yml" "GH_TOKEN" "runner receives the GitHub token"
+assert_grep "docker-compose.yml" "OMNIGENT_RUNNER_ENV_PASSTHROUGH" "runner forwards GH_TOKEN into the agent sandbox"
 assert_grep "runner/Dockerfile" "githubcli" "runner installs the GitHub CLI"
 assert_grep "runner/entrypoint.sh" "gh auth setup-git" "runner wires git to GH_TOKEN"
 
