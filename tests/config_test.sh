@@ -75,6 +75,9 @@ assert_grep "runner/Dockerfile" "uv tool install"  "runner installs the omnigent
 assert_grep "runner/entrypoint.sh" "omnigent host" "runner runs 'omnigent host'"
 assert_grep "docker-compose.yml" "CLAUDE_CODE_OAUTH_TOKEN" "runner receives the Claude Code token"
 assert_grep ".env.example" "CLAUDE_CODE_OAUTH_TOKEN=" ".env.example documents the Claude Code token"
+assert_grep "docker-compose.yml" "GH_TOKEN" "runner receives the GitHub token"
+assert_grep "runner/Dockerfile" "githubcli" "runner installs the GitHub CLI"
+assert_grep "runner/entrypoint.sh" "gh auth setup-git" "runner wires git to GH_TOKEN"
 
 assert_grep "docker-compose.yml" "omnigent-runner"      "runner service present"
 assert_grep "docker-compose.yml" "privileged: true"     "runner is privileged (for bubblewrap)"

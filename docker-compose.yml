@@ -116,6 +116,10 @@ services:
       # `claude setup-token` and store in .env. Optional so the stack still
       # boots without it; the runner just can't run Claude sessions until set.
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      # GitHub access for agents (gh + git). Optional; a fine-grained PAT.
+      GH_TOKEN: ${GH_TOKEN:-}
+      GIT_USER_NAME: ${GIT_USER_NAME:-}
+      GIT_USER_EMAIL: ${GIT_USER_EMAIL:-}
     extra_hosts:
       # Resolve the public domain to the Docker host so the runner dials
       # back through Caddy (works for a real FQDN and for localhost).

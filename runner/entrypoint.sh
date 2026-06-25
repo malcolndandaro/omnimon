@@ -16,6 +16,18 @@ set -u
 
 log() { printf '[omnimon-runner] %s\n' "$*"; }
 
+# Configure GitHub access for agents when a token is provided. `gh` reads
+# GH_TOKEN directly; `gh auth setup-git` points git's credential helper at it.
+if [ -n "${GH_TOKEN:-}" ]; then
+	if gh auth setup-git >/dev/null 2>&1; then
+		log "GitHub: git + gh authenticated via GH_TOKEN"
+	else
+		log "GitHub: 'gh auth setup-git' failed (is gh installed in the image?)"
+	fi
+	[ -n "${GIT_USER_NAME:-}" ]  && git config --global user.name  "${GIT_USER_NAME}"
+	[ -n "${GIT_USER_EMAIL:-}" ] && git config --global user.email "${GIT_USER_EMAIL}"
+fi
+
 while true; do
 	log "connecting host to ${OMNIGENT_SERVER_URL}"
 	if omnigent host "${OMNIGENT_SERVER_URL}"; then
