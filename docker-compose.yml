@@ -71,6 +71,13 @@ services:
       OMNIGENT_OIDC_ALLOW_INVITES: ${OMNIGENT_OIDC_ALLOW_INVITES:-0}
       # OIDC mode signs its session cookie with this (hex, >=32 bytes).
       OMNIGENT_OIDC_COOKIE_SECRET: ${OMNIGENT_OIDC_COOKIE_SECRET:?set OMNIGENT_OIDC_COOKIE_SECRET in .env}
+      # Session lifetime (hours). The runner reuses a *user* OIDC session to
+      # connect (upstream v0.1.0 has no headless host credential), so the
+      # upstream 8h default makes the runner's tunnel 403 every 8h until a
+      # human re-runs `omnigent login`. We default to 1 year so the runner is
+      # set-and-forget; this also lengthens the browser UI session (acceptable
+      # on a single-user box). Lower it in .env if you want a shorter window.
+      OMNIGENT_OIDC_SESSION_TTL_HOURS: ${OMNIGENT_OIDC_SESSION_TTL_HOURS:-8760}
     volumes:
       - artifact-data:/data
     depends_on:

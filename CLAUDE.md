@@ -59,14 +59,20 @@ docker compose exec omnigent-runner claude setup-token   # -> put token in .env 
 - Claude Code auth is headless via `CLAUDE_CODE_OAUTH_TOKEN`; capture the token
   from `claude setup-token` with tmux `capture-pane` (raw TUI logs corrupt it),
   and submit input with a carriage return.
-- **Runner tunnel 403 after server restart:** the runner's `omnigent login` token
-  is validated by the server on every tunnel connection. If the server container
-  restarts (or `OMNIGENT_OIDC_COOKIE_SECRET` is rotated), it rejects the stored
-  token with HTTP 403 and all job executions fail. Fix: re-run
-  `docker compose exec omnigent-runner omnigent login https://<OMNIMON_DOMAIN>`.
-  The entrypoint logs this as `ALERT:` and keeps retrying automatically. **Never
-  rotate `OMNIGENT_OIDC_COOKIE_SECRET` without immediately re-running
-  `omnigent login`.**
+- **Runner tunnel 403:** the runner connects using a *user* `omnigent login`
+  session token (upstream v0.1.0 has no headless host credential), validated on
+  every tunnel connection. The token gets rejected with HTTP 403 — and all job
+  executions fail — when it **expires** (the dominant cause: it's purely
+  time-based, governed by `OMNIGENT_OIDC_SESSION_TTL_HOURS`), when the server
+  restarts and clears in-memory sessions, or when `OMNIGENT_OIDC_COOKIE_SECRET`
+  is rotated. Fix: re-run
+  `docker compose exec omnigent-runner omnigent login https://<OMNIMON_DOMAIN>`
+  (OIDC ticket flow — open the printed URL in a browser logged in as the allowed
+  Google account). The entrypoint logs `ALERT:` and keeps retrying, so it
+  reconnects automatically once a fresh token lands. **To stop the periodic
+  re-auth**, raise `OMNIGENT_OIDC_SESSION_TTL_HOURS` (upstream default **8** =
+  every 8h; we default to **8760** = 1 year). **Never rotate
+  `OMNIGENT_OIDC_COOKIE_SECRET` without immediately re-running `omnigent login`.**
 - Edits made on Windows: shell scripts must stay **LF**; strip CRLF before
   piping any git-checked-out script to a Linux host.
 
