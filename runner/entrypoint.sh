@@ -14,7 +14,6 @@
 #
 # If 403s persist across 5+ retries (~2.5 min) the token is likely genuinely
 # invalid (OMNIGENT_OIDC_COOKIE_SECRET was rotated). Re-run `omnigent login`.
-# OMNIGENT_ALERT_WEBHOOK_URL, if set, receives a POST at that point.
 #
 # Claude Code auth is headless via the CLAUDE_CODE_OAUTH_TOKEN env var; get it
 # once with `docker compose exec omnigent-runner claude setup-token` and store
@@ -23,19 +22,7 @@
 set -u
 : "${OMNIGENT_SERVER_URL:?set OMNIGENT_SERVER_URL}"
 
-log()   { printf '[omnimon-runner] %s\n' "$*"; }
-
-# Print to stderr (always visible in `docker compose logs`) and optionally POST
-# to a webhook so an operator is notified without watching logs.
-alert() {
-    printf '[omnimon-runner] ALERT: %s\n' "$*" >&2
-    if [ -n "${OMNIGENT_ALERT_WEBHOOK_URL:-}" ]; then
-        curl -s -X POST "${OMNIGENT_ALERT_WEBHOOK_URL}" \
-            --max-time 10 \
-            -d "omnimon-runner: $*" \
-            >/dev/null 2>&1 || true
-    fi
-}
+log() { printf '[omnimon-runner] %s\n' "$*"; }
 
 # Configure GitHub access for agents when a token is provided. `gh` reads
 # GH_TOKEN directly; `gh auth setup-git` points git's credential helper at it.
@@ -49,7 +36,7 @@ if [ -n "${GH_TOKEN:-}" ]; then
     [ -n "${GIT_USER_EMAIL:-}" ] && git config --global user.email "${GIT_USER_EMAIL}"
 fi
 
-# How many consecutive 403s before we stop silently retrying and alert.
+# How many consecutive 403s before we stop silently retrying and log loudly.
 # 5 attempts × 30 s ≈ 2.5 min — enough time for the server to fully initialize
 # after a restart while not masking a genuinely broken token for too long.
 ALERT_403_THRESHOLD=5
@@ -84,8 +71,9 @@ while true; do
         else
             # Persistent 403 → likely Mode 2: OMNIGENT_OIDC_COOKIE_SECRET was
             # rotated and the stored token is no longer verifiable. Needs human.
-            alert "runner tunnel rejected (HTTP 403) for ${consecutive_403s} consecutive attempts — token may be invalid. Re-authenticate: docker compose exec omnigent-runner omnigent login ${OMNIGENT_SERVER_URL}"
-            sleep 120  # keep retrying in case the operator re-logins; loop picks it up
+            printf '[omnimon-runner] ALERT: runner tunnel rejected (HTTP 403) for %s consecutive attempts — token may be invalid. Re-authenticate:\n' "${consecutive_403s}" >&2
+            printf '[omnimon-runner] ALERT:   docker compose exec omnigent-runner omnigent login %s\n' "${OMNIGENT_SERVER_URL}" >&2
+            sleep 120  # keep retrying; loop picks up a new token automatically once re-logged in
         fi
         continue
     fi

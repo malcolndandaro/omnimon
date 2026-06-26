@@ -64,8 +64,8 @@ docker compose exec omnigent-runner claude setup-token   # -> put token in .env 
   restarts (or `OMNIGENT_OIDC_COOKIE_SECRET` is rotated), it rejects the stored
   token with HTTP 403 and all job executions fail. Fix: re-run
   `docker compose exec omnigent-runner omnigent login https://<OMNIMON_DOMAIN>`.
-  The entrypoint logs this as `ALERT:` and fires `OMNIGENT_ALERT_WEBHOOK_URL` if
-  set. **Never rotate `OMNIGENT_OIDC_COOKIE_SECRET` without immediately re-running
+  The entrypoint logs this as `ALERT:` and keeps retrying automatically. **Never
+  rotate `OMNIGENT_OIDC_COOKIE_SECRET` without immediately re-running
   `omnigent login`.**
 - Edits made on Windows: shell scripts must stay **LF**; strip CRLF before
   piping any git-checked-out script to a Linux host.

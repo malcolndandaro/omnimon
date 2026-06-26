@@ -131,9 +131,6 @@ services:
       # the standard harness creds (incl. CLAUDE_CODE_OAUTH_TOKEN) are already
       # forwarded; GH_TOKEN + git identity are the extras we add.
       OMNIGENT_RUNNER_ENV_PASSTHROUGH: ${OMNIGENT_RUNNER_ENV_PASSTHROUGH:-GH_TOKEN,GIT_AUTHOR_NAME,GIT_AUTHOR_EMAIL,GIT_COMMITTER_NAME,GIT_COMMITTER_EMAIL}
-      # Optional: plain-text POST destination for runner auth alerts (HTTP 403).
-      # Compatible with ntfy.sh (https://ntfy.sh/<topic>), Zapier, Make, etc.
-      OMNIGENT_ALERT_WEBHOOK_URL: ${OMNIGENT_ALERT_WEBHOOK_URL:-}
     extra_hosts:
       # Resolve the public domain to the Docker host so the runner dials
       # back through Caddy (works for a real FQDN and for localhost).
