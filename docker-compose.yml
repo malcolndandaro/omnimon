@@ -136,7 +136,9 @@ services:
       # back through Caddy (works for a real FQDN and for localhost).
       - "${OMNIMON_DOMAIN}:host-gateway"
     volumes:
-      - runner-home:/home/omni   # persists the one-time login + Claude creds
+      - runner-home:/home/omni        # persists omnigent login + Claude auth tokens
+      - ./workspace:/workspace        # shared files; host-accessible, survives rebuilds
+      - ./claude:/home/omni/.claude   # Claude skills/commands managed from the host
     networks:
       - runner-net
 

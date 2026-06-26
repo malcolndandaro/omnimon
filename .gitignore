@@ -10,6 +10,13 @@
 data/
 *.log
 
+# Runner shared workspace — contents are runtime files, not source
+workspace/*
+!workspace/.gitkeep
+
+# Runner Claude config — commit skills/commands; ignore local overrides
+claude/settings.local.json
+
 # OS / editor noise
 .DS_Store
 Thumbs.db
