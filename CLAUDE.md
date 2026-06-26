@@ -59,6 +59,14 @@ docker compose exec omnigent-runner claude setup-token   # -> put token in .env 
 - Claude Code auth is headless via `CLAUDE_CODE_OAUTH_TOKEN`; capture the token
   from `claude setup-token` with tmux `capture-pane` (raw TUI logs corrupt it),
   and submit input with a carriage return.
+- **Runner tunnel 403 after server restart:** the runner's `omnigent login` token
+  is validated by the server on every tunnel connection. If the server container
+  restarts (or `OMNIGENT_OIDC_COOKIE_SECRET` is rotated), it rejects the stored
+  token with HTTP 403 and all job executions fail. Fix: re-run
+  `docker compose exec omnigent-runner omnigent login https://<OMNIMON_DOMAIN>`.
+  The entrypoint logs this as `ALERT:` and keeps retrying automatically. **Never
+  rotate `OMNIGENT_OIDC_COOKIE_SECRET` without immediately re-running
+  `omnigent login`.**
 - Edits made on Windows: shell scripts must stay **LF**; strip CRLF before
   piping any git-checked-out script to a Linux host.
 
