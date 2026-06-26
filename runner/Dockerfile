@@ -43,7 +43,10 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 
 # Unprivileged in-container user (bubblewrap runs fine unprivileged; Claude
 # Code dislikes running as root). $HOME is mounted as a named volume at runtime.
-RUN useradd --create-home --home-dir /home/omni --shell /bin/bash omni
+# UID is pinned to 1001 (NOT 1000 — the node base image already owns 1000 as
+# the `node` user). Host bind mounts for this user (./workspace, ./claude) must
+# therefore be group-owned by gid 1001, not 1000 — see the CLAUDE.md gotcha.
+RUN useradd --create-home --home-dir /home/omni --shell /bin/bash --uid 1001 omni
 
 COPY entrypoint.sh /usr/local/bin/omnimon-runner-entrypoint.sh
 RUN chmod +x /usr/local/bin/omnimon-runner-entrypoint.sh

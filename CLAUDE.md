@@ -59,6 +59,15 @@ docker compose exec omnigent-runner claude setup-token   # -> put token in .env 
 - Claude Code auth is headless via `CLAUDE_CODE_OAUTH_TOKEN`; capture the token
   from `claude setup-token` with tmux `capture-pane` (raw TUI logs corrupt it),
   and submit input with a carriage return.
+- The runner's in-container **`omni` user is uid 1001, not 1000** (the `node:22`
+  base image already owns uid 1000 as `node`; the Dockerfile pins `--uid 1001`).
+  So the host bind mounts `./workspace` and `./claude` must let uid 1001 write —
+  `chown 1000:1000` (as an earlier note suggested) leaves them unwritable. Use
+  **`sudo chown -R 1000:1001 workspace claude`** (owner = host deployer for
+  `git archive` deploys, group = omni for the container) plus setgid on the dirs
+  (`sudo find workspace claude -type d -exec chmod 2775 {} +`) so both sides can
+  write without resorting to `777`. Docker creates a missing bind-mount dir as
+  `root`, so run this after the dirs first appear.
 - **Runner tunnel 403:** the runner connects using a *user* `omnigent login`
   session token (upstream v0.1.0 has no headless host credential), validated on
   every tunnel connection. The token gets rejected with HTTP 403 — and all job
