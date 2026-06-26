@@ -1,6 +1,6 @@
 # Runner tunnel returns HTTP 403; runner_failed_to_start after server restart
 
-Status: needs-triage
+Status: ready-for-human
 
 ## Incident
 
@@ -60,22 +60,20 @@ rather than another 403.
 - [ ] **Confirm cause:** Check `docker compose ps` and `docker compose logs
   omnigent-server` for restart timestamps that precede the 03:34 UTC failure. If the
   server restarted, cause 1 is confirmed.
-- [ ] **Improve the entrypoint's error handling:** The current `entrypoint.sh` treats
-  any non-zero exit from `omnigent host` the same way (prints "likely not logged in
-  yet"). A 403 should print a more actionable message: "token rejected by server —
-  re-run `omnigent login`". This avoids confusion with the first-boot "never logged in"
-  case.
-- [ ] **Document re-auth runbook:** The `README` / `CONTEXT.md` should call out that
-  a server restart invalidates the runner's session and that `omnigent login` must be
-  re-run. Currently the one-time login procedure is documented but the re-auth case
-  (after a server restart) is not.
-- [ ] **Consider a health-check or auto-detect loop:** After N consecutive 403s the
-  entrypoint could print a clearer alert (e.g., to stderr or a log file) so an operator
-  watching logs can act immediately rather than diagnosing from a failed job.
+- [x] **Improve the entrypoint's error handling:** `entrypoint.sh` now captures
+  `omnigent host` output, detects the "HTTP 403" message, and branches:
+  - 403 → prints `ALERT:` to stderr and POSTs to `OMNIGENT_ALERT_WEBHOOK_URL` if set;
+    backs off 30 s (manual action needed).
+  - Other failure → original "likely not logged in yet" message + 15 s retry.
+- [x] **Document re-auth runbook:** Added a gotcha to `CLAUDE.md` covering the 403
+  trigger, the one-liner fix, and the invariant (never rotate the cookie secret without
+  re-running `omnigent login`).
+- [x] **Operator alerting:** `OMNIGENT_ALERT_WEBHOOK_URL` (optional, ntfy/Zapier/Make
+  compatible) wired through `docker-compose.yml` and `.env.example`.
 - [ ] **Evaluate upstream:** Upstream Omnigent (`v0.1.0`) has no headless host token;
   the runner reuses a user OIDC session. If a future upstream version introduces a
   dedicated, long-lived runner registration credential, adopt it (within ADR-0001's
-  pin policy).
+  pin policy). Consider opening an upstream issue.
 
 ## Related
 
