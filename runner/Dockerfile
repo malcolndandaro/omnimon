@@ -33,13 +33,15 @@ RUN npm install -g @anthropic-ai/claude-code
 
 # uv + the omnigent CLI. Everything goes to system paths (/usr/local, /opt)
 # so the persisted $HOME volume can't shadow it. uv brings its own Python 3.12.
+# Pin the CLI to the same release as the server image (ADR-0001 reproducibility):
+# an unpinned install silently floats to PyPI latest and drifts from the server.
 ENV UV_INSTALL_DIR=/usr/local/bin \
     UV_TOOL_DIR=/opt/uv/tools \
     UV_TOOL_BIN_DIR=/usr/local/bin \
     UV_PYTHON_INSTALL_DIR=/opt/uv/python \
     INSTALLER_NO_MODIFY_PATH=1
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && uv tool install --python 3.12 omnigent
+    && uv tool install --python 3.12 omnigent==0.3.0
 
 # Unprivileged in-container user (bubblewrap runs fine unprivileged; Claude
 # Code dislikes running as root). $HOME is mounted as a named volume at runtime.

@@ -29,7 +29,7 @@ ENV_FILE="$(mktemp)"
 cat >"$ENV_FILE" <<EOF
 OMNIMON_DOMAIN=localhost
 OMNIGENT_IMAGE=ghcr.io/omnigent-ai/omnigent-server
-OMNIGENT_IMAGE_TAG=v0.1.0
+OMNIGENT_IMAGE_TAG=v0.3.0
 POSTGRES_USER=omnigent
 POSTGRES_DB=omnigent
 POSTGRES_PASSWORD=$(openssl rand -hex 16)

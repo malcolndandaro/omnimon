@@ -20,8 +20,8 @@ assert_grep ".env.example" "OMNIGENT_IMAGE_TAG=" ".env.example documents the ima
 assert_grep ".env.example" "POSTGRES_PASSWORD="  ".env.example documents POSTGRES_PASSWORD"
 
 # ── Upstream image pinned, not 'latest' (ADR-0001) ────────────────────
-assert_grep "docker-compose.yml" "OMNIGENT_IMAGE_TAG:-v0.1.0" "server image defaults to pinned v0.1.0"
-assert_grep ".env.example"       "OMNIGENT_IMAGE_TAG=v0.1.0"  ".env.example pins v0.1.0"
+assert_grep "docker-compose.yml" "OMNIGENT_IMAGE_TAG:-v0.3.0" "server image defaults to pinned v0.3.0"
+assert_grep ".env.example"       "OMNIGENT_IMAGE_TAG=v0.3.0"  ".env.example pins v0.3.0"
 refute_grep ".env.example"       "OMNIGENT_IMAGE_TAG=latest"  ".env.example does not pin 'latest'"
 
 # ── Domain is the single source of truth, wired everywhere ────────────
@@ -71,7 +71,7 @@ assert_file "runner/entrypoint.sh" "runner entrypoint present"
 assert_grep "runner/Dockerfile" "bubblewrap"        "runner installs bubblewrap (mandatory sandbox)"
 assert_grep "runner/Dockerfile" "tmux"              "runner installs tmux"
 assert_grep "runner/Dockerfile" "@anthropic-ai/claude-code" "runner installs Claude Code"
-assert_grep "runner/Dockerfile" "uv tool install"  "runner installs the omnigent CLI"
+assert_grep "runner/Dockerfile" "omnigent==0.3.0"  "runner pins the omnigent CLI to the server's release (no silent drift)"
 assert_grep "runner/entrypoint.sh" "omnigent host" "runner runs 'omnigent host'"
 assert_grep "docker-compose.yml" "CLAUDE_CODE_OAUTH_TOKEN" "runner receives the Claude Code token"
 assert_grep ".env.example" "CLAUDE_CODE_OAUTH_TOKEN=" ".env.example documents the Claude Code token"
